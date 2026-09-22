@@ -26,10 +26,10 @@ nav button[aria-current="page"] { color: #17604a; box-shadow: 0 2px #17604a; }
 .count { display: inline-grid; place-items: center; border-radius: 50%; min-width: 23px; height: 23px; margin-left: 4px; font-size: 12px; color: #17604a; background: var(--green-soft); }
 .hero { display: flex; justify-content: space-between; align-items: center; gap: 30px; padding: 12px 0 35px; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: #5e6b74; }
-.court-art { width: 245px; height: 150px; padding: 20px 22px 34px; background: #17604a; border-radius: 17px; transform: rotate(-6deg); margin-right: 25px; flex-shrink: 0; }
-.court-lines { height: 100%; border: 1px solid #b6d0c3; position: relative; background: linear-gradient(90deg, transparent 49.7%, #b6d0c3 49.7%, #b6d0c3 50.3%, transparent 50.3%); }
-.court-lines::before { content: ""; position: absolute; inset: 18% 0; border-top: 1px solid #b6d0c3; border-bottom: 1px solid #b6d0c3; }
-.court-art > span { display: block; text-align: center; color: #d7e7dd; font-size: 9px; letter-spacing: 2.4px; margin-top: 10px; }
+.hero-campus { display: block; color: #17604a; font-size: 15px; font-weight: 700; letter-spacing: 1.5px; }
+.hero-campus span { color: #5e6b74; font-size: 11px; font-weight: 500; letter-spacing: 1.3px; }
+.court-illustration { width: 365px; max-width: 42%; flex-shrink: 0; }
+.court-illustration svg { display: block; width: 100%; height: auto; }
 .filters { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; padding: 18px 0; margin-bottom: 28px; border-block: 1px solid var(--line); }
 .sport-button { border: 1px solid var(--line); background: white; color: #5e6b74; border-radius: 30px; padding: 10px 18px; font-size: 14px; }
 .sport-button[aria-pressed="true"] { background: #17604a; border-color: #17604a; color: white; }
@@ -56,19 +56,31 @@ hr { border: 0; height: 1px; background: var(--line); margin: 22px 0; }
 .selection-summary { padding: 15px; background: var(--surface); border-radius: 9px; font-size: 14px; line-height: 1.8; margin-bottom: 17px; }
 .selection-summary strong { display: block; font-weight: 600; }
 .selection-summary span { color: #5e6b74; }
+.selection-summary[data-status="available"] { background: var(--green-soft); }
+.selection-summary[data-status="available"] span { color: #17604a; }
+.selection-summary[data-status="booked"], .selection-summary[data-status="waiting"] { background: #fff5d6; }
+.selection-summary[data-status="booked"] span, .selection-summary[data-status="waiting"] span { color: #795515; }
+.selection-summary[data-status="yours"] { background: #f5f6f8; }
+.selection-summary[data-status="yours"] span { color: var(--ink); }
 .primary-button { width: 100%; background: #17604a; color: white; padding: 15px; border-radius: 9px; font-size: 15px; font-weight: 600; }
 .primary-button:hover:not(:disabled) { background: #104b39; }
 .action-note { font-size: 12px; text-align: center; margin-top: 13px; }
+.action-note[data-status="available"], .action-note[data-status="yours"] { color: #17604a; }
+.action-note[data-status="booked"], .action-note[data-status="waiting"] { color: #795515; background: #fff5d6; padding: 10px; border-radius: 8px; }
+.slot-button[data-status="waiting"], .slot-button[data-status="booked"][aria-pressed="true"] { background: #fff5d6; border-color: #b6872f; }
+.slot-button[data-status="waiting"][aria-pressed="true"], .slot-button[data-status="booked"][aria-pressed="true"] { box-shadow: inset 0 0 0 1px #b6872f; }
+.slot-button[data-status="waiting"] small, .slot-button[data-status="booked"][aria-pressed="true"] small { color: #795515; }
 .notice { padding: 15px; background: var(--green-soft); color: #17604a; border-radius: 9px; font-size: 14px; margin-bottom: 16px; }
 .notice strong { display: block; margin-bottom: 5px; }
-.notice.warning { background: #fcf1df; color: #805919; }
+.notice.warning { background: #fff5d6; color: #795515; }
 .record { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 24px; margin: 20px 0; background: white; border: 1px solid var(--line); border-radius: 16px; }
 .badge { display: inline-block; padding: 4px 9px; border-radius: 6px; color: #17604a; background: var(--green-soft); font-size: 13px; margin-bottom: 10px; }
+.badge[data-status="waitlist"] { color: #795515; background: #fff5d6; }
 .secondary-button { padding: 10px 15px; background: white; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
 .demo-controls { margin-top: 35px; padding-top: 20px; border-top: 1px solid var(--line); color: #5e6b74; font-size: 13px; }
 .demo-controls summary { cursor: pointer; width: fit-content; padding: 8px 0; }
 footer { border-top: 1px solid var(--line); padding: 20px 32px; font-size: 12px; color: #5e6b74; }
 .skip-link { position: absolute; left: 16px; top: -100px; z-index: 5; padding: 12px; background: white; color: #17604a; }
 .skip-link:focus { top: 12px; }
-@media (max-width: 740px) { .campus { display: none; } .court-art { width: 175px; height: 115px; margin-right: 10px; } .site-header { padding: 18px 24px; } }
-@media (max-width: 450px) { .site-header { padding: 18px 20px; flex-wrap: wrap; gap: 12px; } nav { width: 100%; } .court-art { display: none; } .hero { padding-top: 0; } .court-button { padding: 18px 12px; gap: 10px; } .court-number { width: 36px; font-size: 19px; } .court-button strong { font-size: 14px; } .availability { white-space: normal; max-width: 49px; } .booking-panel { padding: 18px; } .slot-button { font-size: 13px; } .slot-button small { font-size: 11px; } .record { flex-direction: column; align-items: stretch; } select { font-size: 16px; } footer { padding: 20px; } }
+@media (max-width: 740px) { .campus { display: none; } .court-illustration { width: 220px; max-width: 36%; } .site-header { padding: 18px 24px; } .hero-campus span { display: block; margin-top: 5px; } }
+@media (max-width: 450px) { .site-header { padding: 18px 20px; flex-wrap: wrap; gap: 12px; } nav { width: 100%; } .court-illustration { width: 210px; max-width: 100%; align-self: center; } .hero { padding-top: 0; flex-direction: column; align-items: flex-start; gap: 8px; } .court-button { padding: 18px 12px; gap: 10px; } .court-number { width: 36px; font-size: 19px; } .court-button strong { font-size: 14px; } .availability { white-space: normal; max-width: 63px; } .booking-panel { padding: 18px; } .slot-button { font-size: 13px; } .slot-button small { font-size: 11px; } .record { flex-direction: column; align-items: stretch; } select { font-size: 16px; } footer { padding: 20px; } }
