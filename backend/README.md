@@ -1,4 +1,4 @@
-# SlotGrab backend: foundation and catalogue
+# SlotGrab backend: foundation, catalogue and booking
 
 Python 3.12+ and PostgreSQL 17+ are required. The verified local environment is Python 3.14 and PostgreSQL 18. No Supabase is used. Run the following commands from `backend/`.
 
@@ -57,7 +57,7 @@ Sources are the team's `PS.pdf` and `SlotGrab_DevMania.pdf`, supplied in the par
 
 Two days produce 3 sports, 11 facilities and 110 slots. Football has no seeded facilities because the PDFs do not identify a specific field. No bookings, closures, waitlists, scores or team records are seeded. The February Spirit closure in the deck is not a September closure. All slots begin empty. Seed operations insert missing records in one transaction, preserve existing records, and can be repeated. Use new `--start-date` values for later demonstrations.
 
-The frontend still has separate sample court counts, Basketball and hard-coded availability. Catalogue integration must reconcile these with the database in Milestone 2; the frontend is not connected by this milestone.
+The frontend still has separate sample court counts, Basketball and hard-coded availability. Catalogue integration must reconcile these with the database in a later milestone; the frontend is not yet connected to the backend.
 
 ## Verification
 
@@ -103,3 +103,49 @@ Open http://127.0.0.1:8000/docs and use Try it out / Execute:
 6. `/health`: expect 200 and database connected. The frontend will still show demo data until its integration milestone.
 
 Confirmed-to-cancelled availability changes and inactive-facility filtering are covered by `tests/test_catalogue.py` in isolated schemas. Run tests to verify these without manually changing shared demo data. Restart Uvicorn after editing Python files, or use `--reload` during development.
+
+## Phase 3: atomic booking API
+
+The booking route is a local demo until real authentication exists. It is **disabled by default**. Start it from `backend/` in a local PowerShell terminal:
+
+```powershell
+$env:SLOTGRAB_DEMO_MODE = '1'
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+The demo routes also check the request's peer address and reject non-local peers. Never enable demo mode on a public or reverse-proxied deployment. `X-Demo-User-Id` selects a synthetic seed identity; it is **not login or institute verification**. Production booking must replace it with authenticated identity. Only seed users are shown by `GET /api/demo/users` while demo mode is on; the endpoint returns IDs and synthetic names without email addresses.
+
+`POST /api/bookings` takes a JSON body such as:
+
+```json
+{"slot_id":101,"idempotency_key":"e68ba042-0052-4dc4-9b04-74e0867ca397"}
+```
+
+The `X-Demo-User-Id` request header must be a positive ID from `/api/demo/users`. Use a fresh UUID for every new booking attempt; reuse the same UUID only to retry the same attempted booking. Results:
+
+| HTTP | Meaning |
+| --- | --- |
+| `201` | New booking committed; body contains booking ID, slot ID, CONFIRMED status and creation time |
+| `200` | Same user's same key and slot already succeeded; original booking returned without a new row |
+| `409 SLOT_ALREADY_BOOKED` | Another confirmed booking owns the slot |
+| `409 SLOT_UNAVAILABLE` | Facility inactive or slot already started in IST |
+| `409 IDEMPOTENCY_KEY_REUSED` | Same user's key was used for a different slot |
+| `409 REQUEST_ALREADY_CANCELLED` | Original booking was cancelled; new attempt needs a fresh key |
+| `401` | Missing/unknown demo identity |
+| `403` | Demo mode off or peer not local |
+| `404` | Unknown slot ID |
+| `422` | Invalid header, slot ID or UUID |
+| `503` | Database unavailable |
+
+Each request uses one SQLAlchemy transaction. A blocking PostgreSQL `FOR UPDATE` lock on the slot and its facility serializes contenders, followed by an active-facility and IST start-time check, a confirmed-booking check, and one insert. The partial unique index on confirmed bookings remains a second database guarantee. An `IntegrityError` from a simultaneous key/slot collision is resolved to an existing idempotent response or a conflict. The API returns success only after commit. The catalogue is a snapshot, so its AVAILABLE label does not reserve a slot.
+
+### Manual Swagger tests
+
+1. Open `/docs`, call `GET /api/demo/users` and note two different synthetic IDs.
+2. Call `GET /api/sports`, choose Badminton, then `GET /api/facilities`, then `GET /api/slots` for a future date such as `2026-09-25`. Note an AVAILABLE slot ID. If testing after that date, seed new days with `python -m app.seed --start-date YYYY-MM-DD --days 2` first.
+3. In `POST /api/bookings`, use the first synthetic ID as the `X-Demo-User-Id` header and a fresh UUID in the JSON body. Expect `201` and a booking ID.
+4. Call `GET /api/slots` again: that slot must show BOOKED. Repeat the exact POST with the same user, slot and UUID: expect `200` and the same booking ID.
+5. Repeat with the second user and a different UUID: expect `409 SLOT_ALREADY_BOOKED`. Use the first user's original UUID on a different available slot: expect `409 IDEMPOTENCY_KEY_REUSED`.
+6. Try an unknown slot ID (`999999`): expect `404`. Try an already-started slot or disable a facility in the test database: expect `409 SLOT_UNAVAILABLE`.
+
+Use another free slot or seed a future date to repeat tests. Do not remove bookings by hand merely to reset a shared demo. There is no cancellation HTTP endpoint or frontend connection yet; those remain later milestones. `tests/test_bookings.py` runs 50 simultaneous users against one slot in an isolated PostgreSQL schema: exactly one request returns 201, 49 return 409, and the database contains one confirmed row. It also tests same-key retries, conflicting keys/slots, access guards and invalid requests.

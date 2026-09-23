@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .database import build_engine, session_factory
 from .routes.catalogue import router as catalogue_router
+from .routes.bookings import router as bookings_router
 
 
 class HealthResponse(BaseModel):
@@ -28,6 +29,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
     app = FastAPI(title="SlotGrab API", version="0.1.0", lifespan=lifespan)
     app.include_router(catalogue_router)
+    app.include_router(bookings_router)
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request: Request, exc: SQLAlchemyError):

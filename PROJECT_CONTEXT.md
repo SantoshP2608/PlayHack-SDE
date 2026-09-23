@@ -19,6 +19,7 @@ The core competition rule is: **one valid booking may exist for one facility/cou
 - **Tests:** `tests/demo-bookings.test.mjs` tests reducer behaviour only.
 - **Backend foundation (Milestone 1):** `backend/app/models.py` defines the five approved V1 SQLAlchemy models. FastAPI exposes `/health` and `/docs`; psycopg 3 connects to PostgreSQL without Supabase. Sync request-scoped sessions and pooled connections are provided in `database.py`.
 - **Catalogue (Phase 2):** `backend/app/routes/catalogue.py` exposes GET `/api/sports`, `/api/facilities?sport_id=...`, and `/api/slots?facility_id=...&date=YYYY-MM-DD`. Public response contracts are in `schemas.py`. Active facilities only in lists; direct slot lookup marks inactive facilities/past or started slots UNAVAILABLE, otherwise confirmed bookings BOOKED and remaining slots AVAILABLE. Availability is calculated in SQL using PostgreSQL's current statement time in Asia/Kolkata; no stored status or 12-hour release rule. Responses are uncached snapshots, not reservations.
+- **Booking (Phase 3):** `backend/app/routes/bookings.py` exposes POST `/api/bookings` and GET `/api/demo/users`. Booking is enabled only with `SLOTGRAB_DEMO_MODE=1` and a local peer, using a synthetic ID header; this is not real authentication. The route locks slot/facility rows, checks bookability, inserts a confirmed booking in one transaction, and handles duplicate request keys. PostgreSQL's partial unique index is the final one-confirmed-booking guarantee. See `backend/README.md` for request/response contracts.
 - **Backend setup:** see `backend/README.md`. Explicit create-database, table initialization and repeatable seed commands; an isolated Windows development cluster can run on localhost port 55432. Credentials and cluster files are ignored.
 - **Verified local state (2026-09-23):** PostgreSQL 18 database `slotgrab` on 127.0.0.1:55432; 3 sports, 11 facilities, 110 slots for 25-26 September and 50 synthetic users, zero bookings. FastAPI was started on 127.0.0.1:8000 and its health/docs checked over HTTP. Process availability must be rechecked in future sessions.
 - **Dependency reproducibility:** direct ranges in `backend/requirements.txt`; tested resolved versions in `backend/requirements.lock.txt`. Python 3.14 was used locally. Install the lock file for the same environment.
@@ -33,11 +34,11 @@ The core competition rule is: **one valid booking may exist for one facility/cou
 ## Boundaries and non-claims
 
 - The frontend remains an **in-memory prototype**. Its state disappears on refresh; backend integration is pending.
-- Backend foundation and read-only catalogue are implemented. There are no booking endpoints, authentication, live multi-user UI, waitlist promotion, notifications, institutional SSO or deployed backend.
-- V1 backend excludes waitlist and closures. Frontend waitlist remains simulation only. Booking endpoints must take identity from authentication, never trust a supplied user ID. Email domain checks alone do not verify identity.
-- Database rules use whole-hour same-day IST slots and one CONFIRMED booking per slot; cancelled rows retain history. The successful-request idempotency key constraint does not by itself implement API retries or payload validation.
+- Backend foundation, read-only catalogue and local demo booking are implemented. There is no production authentication, frontend integration, booking cancellation API, waitlist promotion, notifications, institutional SSO or deployed backend.
+- V1 backend excludes waitlist and closures. Frontend waitlist remains simulation only. The local booking header is an explicit demo-only exception: replace it with authenticated identity before deployment. Email domain checks alone do not verify identity.
+- Database rules use whole-hour same-day IST slots and one CONFIRMED booking per slot; cancelled rows retain history. Booking API now implements UUID request validation and retry replay for a successful active booking; reuse after cancellation or for another slot returns 409.
 - Seed provenance is documented in `backend/README.md`: PDF sample courts/hours; caller-selected dates; opt-in synthetic users. Backend data differs from existing frontend samples until catalogue integration.
-- The reducer is not a concurrency guarantee. A future database-backed booking endpoint must enforce one booking per court/time slot atomically and support idempotent retries.
+- The frontend reducer is not a concurrency guarantee. The backend database test now proves 50 simultaneous distinct users produce one confirmed booking; the frontend remains unconnected.
 - Sample facilities, times, blocked slots, and queue positions are demo data, not confirmed IITG operational data.
 
 ## Required workflow for every agent and change
@@ -60,6 +61,13 @@ npm.cmd run dev
 Use `npm.cmd` on Windows because PowerShell may block `npm.ps1`.
 
 ## Change log
+
+### 2026-09-23 - Phase 3 local booking and synchronized baseline
+
+- Committed and pushed Phase 1/2 to `origin/main` as `ec5559a`; excluded unrelated local `package-lock.json` edits and ignored secrets/database files.
+- Added opt-in localhost demo identity listing and POST booking API. The transaction blocks on `FOR UPDATE`, checks identity, facility activity, slot start time and existing booking, then inserts and commits. Existing successful retries return the same booking; different slot/cancelled reuse returns 409. A database unique violation is recovered to a controlled response.
+- Added real PostgreSQL integration tests for booking responses, identity guard, validation, cancellation history, catalogue status, 50 concurrent users and concurrent same-key retries. Final full run: 42 passed with one upstream Starlette/httpx deprecation warning. `git diff --check` passed.
+- Added Swagger manual test instructions and exact response/error contracts to backend README. Live local HTTP test with a 2099 sample slot returned 201 for the winner, 200 for the identical retry, 409 SLOT_ALREADY_BOOKED for a second user and BOOKED on catalogue reread. This added one demo booking on slot 281; earlier 2026 seed data remains unchanged. Git history is the source for Phase 3 publish status.
 
 ### 2026-09-23 - Phase 2 catalogue API verified
 
