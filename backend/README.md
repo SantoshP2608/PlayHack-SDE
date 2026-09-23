@@ -37,7 +37,7 @@ Stop the API using Ctrl+C. Stop only this project's database with `./scripts/loc
 `app/models.py` is the schema source: users, sports, facilities, slots, bookings. SQLAlchemy sessions and connection pooling use psycopg 3. Sync database operations run in sync FastAPI routes. No raw `schema.sql` or duplicate SQL schema is maintained.
 
 - All slot dates and times mean Asia/Kolkata (IST). Audit timestamps use timezone-aware PostgreSQL timestamps. Slots are fixed, whole-hour, same-day sessions; 23:00-to-midnight slots are intentionally unsupported in this V1 schema.
-- A partial unique index allows at most one CONFIRMED booking per slot while retaining cancelled history. A user/request-key unique constraint supports later successful-request retry handling. API-level idempotency replay, payload checks, transactions, identity verification and authorization remain to be implemented.
+- A partial unique index allows at most one CONFIRMED booking per slot while retaining cancelled history. A user/request-key unique constraint supports successful-request retry handling. The local demo API implements transactional booking and idempotency replay; production authentication and authorization remain to be implemented.
 - The email-domain constraint is formatting validation, not proof that an account is verified. No login endpoint exists yet. Future booking routes must derive the user from authenticated identity, not trust a caller-supplied user ID.
 - Availability will be derived from confirmed bookings and facility activity; no stored slot status exists. Future booking routes must reject inactive facilities and past slots. `is_active` is a catalogue switch, not a closure scheduling system.
 - `init_db` creates missing objects and preserves existing data. It does not migrate existing columns or indexes. Introduce explicit migrations before changing a populated schema.
@@ -65,7 +65,7 @@ The frontend still has separate sample court counts, Basketball and hard-coded a
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Tests require PostgreSQL. They use the configured database (or `TEST_DATABASE_URL` when provided), create randomly named `test_slotgrab_*` schemas and remove only those schemas afterward. They never delete public application tables. Use a development database with CREATE SCHEMA permission. Coverage includes seed repeatability, booking uniqueness, cancellation/rebooking, foreign keys, input constraints, idempotency-key uniqueness, health success/failure and Swagger/OpenAPI. This is not the later 50-request booking API race test.
+Tests require PostgreSQL. They use the configured database (or `TEST_DATABASE_URL` when provided), create randomly named `test_slotgrab_*` schemas and remove only those schemas afterward. They never delete public application tables. Use a development database with CREATE SCHEMA permission. Coverage includes seed repeatability, booking uniqueness, cancellation/rebooking, foreign keys, input constraints, idempotency, health, Swagger/OpenAPI, and the 50-request booking race. Phase 4 also supplies the live command below for a judge-visible demonstration through the running server.
 
 ## Phase 2: read-only catalogue
 
@@ -149,3 +149,27 @@ Each request uses one SQLAlchemy transaction. A blocking PostgreSQL `FOR UPDATE`
 6. Try an unknown slot ID (`999999`): expect `404`. Try an already-started slot or disable a facility in the test database: expect `409 SLOT_UNAVAILABLE`.
 
 Use another free slot or seed a future date to repeat tests. Do not remove bookings by hand merely to reset a shared demo. There is no cancellation HTTP endpoint or frontend connection yet; those remain later milestones. `tests/test_bookings.py` runs 50 simultaneous users against one slot in an isolated PostgreSQL schema: exactly one request returns 201, 49 return 409, and the database contains one confirmed row. It also tests same-key retries, conflicting keys/slots, access guards and invalid requests.
+
+## Phase 4: repeatable live concurrency proof
+
+Keep PostgreSQL and the local demo API running, then open a second terminal in `backend/`:
+
+```powershell
+.\.venv\Scripts\python.exe -m app.race_demo
+```
+
+The command finds the earliest active, unbooked future slot, loads 50 synthetic users from the live API, releases 50 HTTP requests through one synchronization gate, and reads PostgreSQL afterward. It passes only when the HTTP results are exactly one `201`, 49 `409 SLOT_ALREADY_BOOKED` responses, and the database contains exactly one confirmed row. It never deletes or resets bookings. Use `--slot-id ID` to demonstrate a particular free future slot, `--requests 2..50` for a smaller diagnostic run, or `--base-url http://localhost:8000` for another loopback address.
+
+Expected judge-facing result:
+
+```text
+Requests fired:       50
+Bookings confirmed:   1
+Clean conflicts:      49
+Unexpected responses: 0
+Database confirmed:   1
+Oversold:             0
+RESULT:               PASS
+```
+
+If no free future slot remains, seed a new future date. If demo mode is disabled, the API is stopped, fewer than 50 synthetic users exist, any request fails, or PostgreSQL contains an unexpected result, the command exits nonzero and prints the reason. Every run consumes one previously free slot by creating the winning booking.
