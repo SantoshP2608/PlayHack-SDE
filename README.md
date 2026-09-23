@@ -1,5 +1,7 @@
 # SlotGrab frontend
 
+Backend foundation, Phase 2 catalogue endpoints, SQLAlchemy models, seed provenance and Swagger test instructions are in [backend/README.md](backend/README.md). Read [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) before contributing. The frontend below is still a standalone demo and is not connected to the backend yet.
+
 Campus Club UI using Next.js 16, JavaScript, React and Tailwind CSS 4. Sign-in is deferred.
 
 ## Run on Windows

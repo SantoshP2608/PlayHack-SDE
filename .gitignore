@@ -5,3 +5,7 @@ tmp/
 .env*
 !.env.example
 *.log
+backend/.venv/
+backend/.local/
+__pycache__/
+.pytest_cache/
