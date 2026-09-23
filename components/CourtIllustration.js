@@ -16,12 +16,6 @@ export default function CourtIllustration() {
           <path d="M157 17V153" stroke="#fff" strokeWidth="3" strokeDasharray="3 3" />
           <circle cx="157" cy="17" r="3" fill="#fff" /><circle cx="157" cy="153" r="3" fill="#fff" />
         </g>
-        <g transform="translate(281 141) rotate(30)" filter="url(#court-shadow)">
-          <path d="M0 29V65" stroke="#f7f8ed" strokeWidth="7" /><path d="M0 61V84" stroke="#163f32" strokeWidth="11" strokeLinecap="round" />
-          <ellipse rx="26" ry="34" fill="#e7edda" /><ellipse rx="22" ry="30" fill="url(#racket-strings)" stroke="#f7f8ed" strokeWidth="4" />
-          <path d="M-4 66H4M-4 73H4M-4 80H4" stroke="#73a088" strokeWidth="1.5" />
-        </g>
-        <circle cx="342" cy="199" r="14" fill="#d7e97b" filter="url(#court-shadow)" /><path d="M332 189Q350 194 339 212" stroke="#fffde8" strokeWidth="2" />
         <g transform="translate(30 211)"><rect width="173" height="33" rx="16.5" fill="white" stroke="#d6e3da" /><circle cx="48" cy="16.5" r="3" fill="#17604a" /><text x="60" y="21" fill="#17604a" fontFamily="Arial, sans-serif" fontSize="11" fontWeight="600" letterSpacing="1.4">IIT GUWAHATI</text></g>
       </svg>
     </div>
